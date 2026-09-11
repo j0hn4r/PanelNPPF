@@ -678,7 +678,31 @@ paperwork, not a rewrite**.
   panel; S5 (Phase 14's original test case) still reveals correctly too;
   the fake-code/plain-search/link-survival checks above all still pass
   unchanged.
-- ⬜ Phase 15 (sync.py, README/CLAUDE.md, store-readiness pass)
+- ✅ **Phase 15** — reported directly: reopening the panel "quite often"
+  scrolled to the bottom rather than back to where reading left off. Root
+  cause: `tools/build.py` collapses every chapter closed by default, so a
+  fresh load always starts far shorter than a page with a chapter open for
+  reading -- and Phase 3's position-restore only ever saved a bare
+  `scrollY`, meaningless once the layout it was recorded against no longer
+  exists. Restoring that pixel offset against the freshly-collapsed,
+  much-shorter page landed deep in the collapsed chapter list, which reads
+  exactly like "dumped at the bottom" -- confirmed directly, not assumed:
+  reproduced with a chapter opened, scrolled into, then reloaded, landing
+  mid-way through the closed accordion rather than back in the chapter.
+  Fixed by saving which chapter(s) are open alongside the hash/scrollY, and
+  reopening them before restoring scroll -- giving the page the same
+  height it had when the position was recorded, the same fix shape as the
+  bookmark-filter/scroll-position bugs above (a remembered pixel offset is
+  only meaningful once the layout it was recorded against exists again).
+  Verified end-to-end: opening one chapter, scrolling into it, and
+  reloading now reopens that exact chapter and lands back at the same
+  in-content position (confirmed via `elementFromPoint`, not just a
+  screenshot, given this session's own well-documented smooth-scroll/
+  render-timing quirks); multiple chapters open at once are all correctly
+  reopened together; the existing hash-based restore path (reached via a
+  cross-reference jump, unaffected by this change) still works unchanged;
+  link counts, search-jump, and Contents navigation all re-verified.
+- ⬜ Phase 16 (sync.py, README/CLAUDE.md, store-readiness pass)
 
 **Still unverified regardless of phase, and can't be from here:** this has
 never been loaded as an actual unpacked Chrome extension

@@ -212,8 +212,23 @@
   }
   const positionStore = getPositionStore();
 
+  // Chapters are collapsed by default on every fresh load (tools/build.py),
+  // so a bare scrollY saved while reading an *open* chapter is meaningless
+  // against the much shorter, fully-collapsed page a restore starts from --
+  // it lands deep in the collapsed list instead of back in the chapter,
+  // reported directly as "scrolls me down to the bottom". Saving which
+  // chapters were open lets the restore re-expand them first, so the page
+  // has the same height it did when the position was recorded.
   function savePosition() {
-    positionStore.set({ hash: location.hash, scrollY: window.scrollY, ts: Date.now() });
+    const openChapters = Array.from(document.querySelectorAll('details.chapter[open]')).map((d) => d.id);
+    positionStore.set({ hash: location.hash, scrollY: window.scrollY, openChapters, ts: Date.now() });
+  }
+
+  function reopenChapters(ids) {
+    (ids || []).forEach((id) => {
+      const el = document.getElementById(id);
+      if (el && el.tagName === 'DETAILS') el.open = true;
+    });
   }
 
   let saveTimer = null;
@@ -234,11 +249,17 @@
         chrome.storage.session.get('pendingLookup', (result) => {
           if (result && result.pendingLookup) return;
           if (pos.hash) location.hash = pos.hash;
-          else window.scrollTo(0, pos.scrollY || 0);
+          else {
+            reopenChapters(pos.openChapters);
+            window.scrollTo(0, pos.scrollY || 0);
+          }
         });
       } else {
         if (pos.hash) location.hash = pos.hash;
-        else window.scrollTo(0, pos.scrollY || 0);
+        else {
+          reopenChapters(pos.openChapters);
+          window.scrollTo(0, pos.scrollY || 0);
+        }
       }
     });
   }
