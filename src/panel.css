@@ -193,15 +193,19 @@
    * .panel-brand already use for their own section breaks below it, so
    * the whole menu reads as one consistent rhythm: [group] --- [group]
    * --- [group], not filters and contents blurring into each other with
-   * only a gap to tell them apart. Its own label duplicates .pn-filters-
-   * label's styling rather than sharing the class -- two same-specificity
-   * rules setting different `order` values on the same class would come
-   * down to source order, which is exactly the kind of cascade fragility
-   * worth just not creating in the first place. */
+   * only a gap to tell them apart. Its own label's *look* is grouped with
+   * .pn-filters-label's below, not its own class -- only the properties
+   * genuinely identical between them (font/letter-spacing/text-transform/
+   * color); `order`/margin/border-top stay on each class's own rule, since
+   * two same-specificity rules setting different `order` values on one
+   * shared class would come down to source order, exactly the cascade
+   * fragility worth not creating. */
+  body.sidepanel .pn-toc-label, body.sidepanel .pn-filters-label{
+    font:600 10.5px/1.5 var(--sans); letter-spacing:.15em;
+    text-transform:uppercase; color:var(--ink3);
+  }
   body.sidepanel .pn-toc-label{
-    margin:16px 20px 6px; padding-top:14px; font:600 10.5px/1.5 var(--sans);
-    letter-spacing:.15em; text-transform:uppercase; color:var(--ink3);
-    border-top:1px solid var(--rule2);
+    margin:16px 20px 6px; padding-top:14px; border-top:1px solid var(--rule2);
   }
   /* display:block, not flex -- reported directly as "mouse over Contents
    * blocks scrolling entirely", confirmed by testing wheel-scroll input
@@ -252,8 +256,7 @@
    * addition, like the topbar and the citation buttons -- render.py's
    * markup is never touched. */
   body.sidepanel .pn-filters-label{
-    margin:14px 20px 6px; font:600 10.5px/1.5 var(--sans);
-    letter-spacing:.15em; text-transform:uppercase; color:var(--ink3);
+    margin:14px 20px 6px;
   }
   /* nppf.css's own .modebar/.refusalbar/.bookmarkbar use a 24px horizontal
    * margin; every menu addition in this file (this label, Contents,
