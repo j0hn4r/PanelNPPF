@@ -1,0 +1,556 @@
+/* PanelNPPF — panel-width overrides layered over the page's own nppf.css.
+ *
+ * The first block below targets the same @media(max-width:1000px)
+ * breakpoint nppf.css already uses for its mobile menu -- the side panel is
+ * virtually always narrower than that, so this rides the site's own narrow
+ * layout rather than inventing a second one. If a viewer ever drags the
+ * panel wider than 1000px, nppf.css's own two-column desktop layout takes
+ * over and those rules simply stop applying (see the note in panel.js about
+ * where the moved nodes end up in that case -- cosmetic only, not broken).
+ * Phase 5's compact/card rules, further down, are deliberately NOT scoped
+ * to that breakpoint -- see the comment there for why.
+ *
+ * panel.js does the DOM surgery (moving nodes); this file only restyles
+ * where they land. Neither file edits vendor/nppf-index.html or nppf.js.
+ */
+@media (max-width:1000px){
+  :root{ --mobilebar-h:52px; } /* was 46px -- room for the search row */
+
+  /* the always-visible bar: [hamburger][back?][search input][clear] */
+  body.sidepanel .pn-topbar{
+    display:flex; align-items:stretch; height:var(--mobilebar-h);
+    background:var(--card); border-bottom:1px solid var(--rule2);
+  }
+  body.sidepanel .pn-topbar .navtoggle{
+    flex:0 0 auto; width:auto; padding:0 12px; border-bottom:0;
+  }
+  /* Phase 9's Back control -- icon-only like .navtoggle in the same bar,
+   * hidden (panel.js) until the first hashchange this session. Scoped
+   * inside this media block, not alongside it, because it only makes
+   * sense as a child of .pn-topbar's own flex row, which is itself only
+   * flex within this same breakpoint. border-right doubles as its own
+   * divider, but a divider alone reads as "these two things are still one
+   * group, just separated" -- reported directly as sitting too close to
+   * the search box, so margin-right adds actual breathing room on top of
+   * it, matching the gap .searchbox's own pill now has from every side. */
+  body.sidepanel .pn-back-btn{
+    flex:0 0 auto; width:36px; margin:0 4px 0 0; padding:0;
+    border:0; border-right:1px solid var(--rule2); background:none;
+    color:var(--ink2); font:400 17px/1 var(--serif); cursor:pointer;
+  }
+  body.sidepanel .pn-back-btn:hover{ background:var(--tint); color:var(--accent); }
+
+  /* The search field itself didn't read as one: it shared the bar's own
+   * --card background with only a 1px underline beneath it, easy to miss
+   * as "type here" rather than as part of the bar's own chrome. Given a
+   * real field boundary instead -- its own background, a full border,
+   * rounded like a proper input -- and pulled in from the bar's own edges
+   * on every side so it can't visually collide with .navtoggle/.pn-back-btn
+   * on the left or #count on the right the way it did flush against them. */
+  body.sidepanel .pn-topbar .searchbox{
+    flex:1 1 auto; align-self:center; margin:0 8px; padding:0;
+    height:34px; border:1px solid var(--rule2); border-radius:8px;
+    background:var(--paper); display:flex; align-items:stretch;
+    position:relative; transition:border-color .13s;
+  }
+  body.sidepanel .pn-topbar .searchbox:focus-within{ border-color:var(--accent); }
+  body.sidepanel .pn-topbar .searchbox input{
+    height:100%; padding:0 30px 0 24px; font-size:13.5px; border:0;
+    background:none;
+  }
+  body.sidepanel .pn-topbar .searchbox .ico{ left:8px; }
+  /* Chrome adds its own "clear field" control to <input type="search">
+   * whenever it has a value, on top of whatever custom one already exists
+   * -- the reported "a blue x appears alongside the dark grey one" is that
+   * native control layering over #clr, not a second element we added.
+   * #clr already does this job; the native one is just noise once it's no
+   * longer the only clear affordance available. */
+  body.sidepanel .pn-topbar .searchbox input[type="search"]::-webkit-search-cancel-button{
+    -webkit-appearance:none; appearance:none;
+  }
+  /* nppf.css's own .clr is just the "x" glyph plus 2px padding (~13x15px)
+   * -- fine tucked inside the old collapsed dropdown, but this moved it
+   * into the always-visible topbar (see panel.js), where it's now a
+   * frequently-used control sitting close to #count. Sized up to the same
+   * 24x24 CSS px minimum WCAG 2.2 AA (and .bookmark-btn/.pn-cite-btn)
+   * already use elsewhere in this codebase, centered on the same `right`
+   * anchor so the glyph doesn't move, just its hit area. */
+  body.sidepanel .pn-topbar .searchbox .clr{
+    right:4px; min-width:24px; min-height:24px;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+
+  /* #count moved in beside the search box (see panel.js) -- nppf.js still
+   * owns showing/hiding it (toggling inline display:block/none in run()),
+   * this only restyles it into a small pill instead of a full-width line.
+   * Not touching `display` here means that toggle keeps working untouched:
+   * a flex child's own display:block/none isn't overridden by the parent's
+   * flex context either way. No left margin of its own needed now --
+   * .searchbox's own margin:0 8px (above) already clears it from #count
+   * on the right, the same gap it gets from .navtoggle/.pn-back-btn on the
+   * left. */
+  body.sidepanel .pn-topbar #count{
+    flex:0 0 auto; align-self:center; margin:0 10px 0 0; padding:3px 8px;
+    font-size:10px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--accent2); background:var(--tint); border-radius:8px;
+    white-space:nowrap;
+  }
+
+  /* the brand block, relocated from the top of <aside> to the foot of the
+   * dropdown menu (see panel.js) -- Crown-copyright attribution and the
+   * "this is unofficial" disclaimer, kept but no longer costing ~200px of
+   * a narrow panel's most valuable space. */
+  body.sidepanel .panel-brand{
+    margin-top:12px; padding:14px 20px 6px; border-top:1px solid var(--rule2);
+  }
+  body.sidepanel .panel-brand h1{ display:none; } /* redundant once you're already inside the panel */
+  body.sidepanel .panel-brand .tagline{ font-size:12px; margin:0 0 8px }
+  body.sidepanel .panel-brand .disclaimer{ font-size:11px; margin:0 }
+
+  /* a little more reading width now the desktop sidebar chrome is gone */
+  body.sidepanel .doc{ padding-inline:14px; }
+
+  /* -- the open filters menu, reworked ------------------------------
+   *
+   * Phase 4 hid #nav (the old contents tree), which used to be tall enough
+   * on its own to fill -- usually overflow -- the whole panel. With it
+   * gone, .panel's remaining children (the mode filter, two checkboxes,
+   * .totop, the brand footer) come to well under half the panel's own
+   * max-height on a typical window: measured at 325px of content in an
+   * 800px-tall viewport. .panel has no background sized to fill the rest,
+   * so the actual document sitting behind it -- whatever chapter happens
+   * to be at the current scroll position -- shows through directly below
+   * the filters, with no boundary between "menu" and "page". Giving it a
+   * min-height that always reaches the bottom of the viewport turns it
+   * into a real backdrop regardless of how little it actually contains,
+   * the same min-height-to-viewport trick as .panel's own existing
+   * max-height fallback pair just above it (vh first for older browsers,
+   * dvh after to correct for a mobile browser chrome's address bar).
+   */
+  /* NB: gated on `.nav-open` too (one compound selector on <body>, both
+   * classes on the same element -- not two ancestor bodies, the mistake
+   * that bit the refusal-highlight rule earlier in this file's history).
+   * nppf.css's own toggle is `body.nav-open .panel{display:block}`; a
+   * `body.sidepanel .panel{display:flex}` without that same gate has EQUAL
+   * specificity (2 classes + 1 element either way) and loads later in the
+   * cascade, so it would silently win and force the panel permanently
+   * visible regardless of .nav-open -- which is exactly what shipped here
+   * the first time, and exactly why display has to be re-set inside the
+   * *already-gated* rule rather than declared fresh alongside it. */
+  body.sidepanel.nav-open .panel{
+    display:flex; flex-direction:column;
+    min-height:calc(100vh - var(--mobilebar-h));
+    min-height:calc(100dvh - var(--mobilebar-h));
+  }
+  /* A real bug, not a screenshot artifact -- found by checking computed
+   * styles after a screenshot showed .modebar's row of buttons with no
+   * visible text: it measured 11px tall against a natural ~27px (its own
+   * button padding is 7px top + 6px bottom alone). Root cause: a flex
+   * item's automatic minimum size (its floor when the flex algorithm
+   * shrinks children) resolves to 0 rather than its content size when
+   * that item has `overflow` other than visible along the container's
+   * main axis -- and .modebar has `overflow:hidden` (nppf.css's own rule,
+   * there to clip the segmented-control's rounded corners), now a flex
+   * item of *this* rule's column layout. .pn-toc has the same overflow:
+   * hidden, for the same clipping reason, and is exactly as exposed.
+   * Every direct child gets flex-shrink:0 so none of them can be silently
+   * compressed like this again, regardless of overflow -- this menu is
+   * meant to scroll as one piece (.panel's own overflow-y:auto, from
+   * nppf.css), never to squeeze an individual control instead. */
+  body.sidepanel.nav-open .panel > *{ flex-shrink:0; }
+  /* Reordered by *priority*, not by turning this into a flex layout for
+   * its own sake: `order` reorders visually without moving anything in
+   * the DOM -- render.py/nppf.js's own markup and event bindings
+   * (id-based, not position-based) don't need to know or care.
+   * `align-items:stretch` is the flex default already, so every child
+   * keeps the same full-width block-like sizing it had before the rule
+   * above turned .panel into a flex container. These `order` assignments
+   * are harmless while the panel is closed (display:none) -- `order` has
+   * no visual effect on a subtree that isn't rendered at all.
+   *
+   * Filters first (0-3), Contents second (4-5): requested directly, and
+   * it also reads better than the reverse -- filters are three compact
+   * controls you can take in at a glance the moment the menu opens,
+   * *then* the one large scrollable list (26 entries), rather than
+   * scrolling past the whole list just to reach three checkboxes. Gaps
+   * left at 6-7 and again after 9, matching this scheme's own existing
+   * gap between 3 and 8 -- room for something new later without
+   * renumbering everything else. */
+  body.sidepanel .pn-filters-label{ order:0; }
+  body.sidepanel .modebar{ order:1; }
+  body.sidepanel .refusalbar{ order:2; }
+  body.sidepanel .bookmarkbar{ order:3; }
+  body.sidepanel .pn-toc-label{ order:4; }
+  body.sidepanel .pn-toc{ order:5; }
+  body.sidepanel .panel-brand{ order:9; }
+
+  /* Contents: reported directly -- long chapters make it easy to lose
+   * track of where you are, and the menu should offer a quick way out.
+   * Sits below the filters (order:4-5 vs. their 0-3), requested directly
+   * -- three compact controls to take in at a glance before the one long
+   * scrollable list, not the other way round. Marked off from the filter
+   * group with the same top-border-then-label pattern .totop and
+   * .panel-brand already use for their own section breaks below it, so
+   * the whole menu reads as one consistent rhythm: [group] --- [group]
+   * --- [group], not filters and contents blurring into each other with
+   * only a gap to tell them apart. Its own label duplicates .pn-filters-
+   * label's styling rather than sharing the class -- two same-specificity
+   * rules setting different `order` values on the same class would come
+   * down to source order, which is exactly the kind of cascade fragility
+   * worth just not creating in the first place. */
+  body.sidepanel .pn-toc-label{
+    margin:16px 20px 6px; padding-top:14px; font:600 10.5px/1.5 var(--sans);
+    letter-spacing:.15em; text-transform:uppercase; color:var(--ink3);
+    border-top:1px solid var(--rule2);
+  }
+  /* display:block, not flex -- reported directly as "mouse over Contents
+   * blocks scrolling entirely", confirmed by testing wheel-scroll input
+   * with the pointer over this element specifically (a synthetic
+   * WheelEvent doesn't reproduce it; the browser's real scroll-input
+   * handling lives below the DOM event layer). Isolated by elimination:
+   * removing `overflow:hidden` alone didn't fix it, removing `display:
+   * flex;flex-direction:column` alone did. A flex container apparently
+   * gets treated specially for wheel-scroll-target purposes in a way a
+   * plain block container isn't, even though its own `.pn-toc-link`
+   * children are already `display:block` and stack identically either
+   * way -- flex was never actually needed here, just a habit carried over
+   * from .panel itself needing it for `order`. `overflow:hidden` is kept:
+   * confirmed separately that it alone doesn't cause the problem, and it's
+   * still needed to clip the links' square corners to this box's rounded
+   * ones. */
+  body.sidepanel .pn-toc{
+    display:block; margin:0 20px 8px;
+    border:1px solid var(--rule2); border-radius:8px;
+    background:var(--card); overflow:hidden;
+  }
+  body.sidepanel .pn-toc-link{
+    display:block; padding:8px 12px; font:400 13px/1.4 var(--serif);
+    color:var(--ink); text-decoration:none; border-top:1px solid var(--rule);
+  }
+  body.sidepanel .pn-toc-link:first-child{ border-top:0; }
+  body.sidepanel .pn-toc-link:hover{ background:var(--tint); }
+  /* the chapter(s) currently open, refreshed by panel.js every time the
+   * menu opens -- a direct answer to "where am I", not just "where can I
+   * go", using state (which <details> happen to be open) that already
+   * exists rather than adding a scroll-position tracker to derive it. */
+  body.sidepanel .pn-toc-link.pn-toc-current{
+    font-weight:700; color:var(--accent); background:var(--tint);
+  }
+  body.sidepanel .pn-toc-divider{
+    padding:6px 12px 4px; font:600 9.5px/1.5 var(--sans);
+    letter-spacing:.12em; text-transform:uppercase; color:var(--ink3);
+    background:var(--card); border-top:1px solid var(--rule);
+  }
+  body.sidepanel .pn-toc-divider:first-child{ border-top:0; }
+
+  /* A small caption above the filter group -- the same all-caps label
+   * language as .section-h in the main document ("PLAN-MAKING POLICIES"
+   * etc.), so "these three controls are one group" reads at a glance
+   * without borrowing .section-h itself (that class also carries
+   * mode/bookmark-filter visibility logic that has nothing to do with a
+   * label sitting inside the filters menu). Purely a panel.js DOM
+   * addition, like the topbar and the citation buttons -- render.py's
+   * markup is never touched. */
+  body.sidepanel .pn-filters-label{
+    margin:14px 20px 6px; font:600 10.5px/1.5 var(--sans);
+    letter-spacing:.15em; text-transform:uppercase; color:var(--ink3);
+  }
+  /* nppf.css's own .modebar/.refusalbar/.bookmarkbar use a 24px horizontal
+   * margin; every menu addition in this file (this label, Contents,
+   * .totop) uses 20px -- a 4px mismatch nobody had reason to notice while
+   * they only ever sat one after the other in a single column, but this
+   * layout pass is exactly the moment to line every section's edges up
+   * properly rather than let it stay slightly, silently off. */
+  body.sidepanel .modebar,
+  body.sidepanel .refusalbar,
+  body.sidepanel .bookmarkbar{
+    margin-inline:20px;
+  }
+
+  /* .totop ("Back to top") used to open first and boldest -- the obvious
+   * move when escaping a long nav tree was the main reason to open this
+   * menu at all. Now that filters are why you're here, it's demoted below
+   * them (order:8, below the filters' 0-3 and above the brand's 9): still
+   * one tap away, just no longer competing with what you actually came
+   * for. De-emphasised to match -- was a solid tinted button, now a plain
+   * top-bordered text row, still full-width and still an easy target,
+   * just visually quieter. */
+  body.sidepanel .totop{
+    order:8; margin:16px 20px 4px; padding:10px 0 0; width:auto;
+    background:none; border:0; border-top:1px solid var(--rule2);
+    border-radius:0; color:var(--ink2); font-weight:600;
+  }
+}
+
+/* Copy-citation button, mirroring .bookmark-btn's own sizing (render.py's
+ * CSS, not this file) so the pair reads as one button group -- unscoped by
+ * the media query above since it belongs to the policy heading itself, not
+ * the narrow-panel chrome, and should still work if the panel is ever wide.
+ */
+body.sidepanel .policy-h .pn-cite-btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  flex:0 0 auto; min-width:24px; min-height:24px; margin-left:2px;
+  border:0; border-radius:3px; background:none; font-size:14px;
+  color:var(--rule2); line-height:1; cursor:pointer;
+  transition:color .13s,background .13s;
+}
+body.sidepanel .policy-h .pn-cite-btn:hover{ color:var(--accent2); background:var(--tint); }
+body.sidepanel .policy-h .pn-cite-btn.copied{ color:var(--accent); }
+
+/* Phase 4: no separate "contents" nav-tree dropdown -- each chapter is its
+ * own closed-by-default accordion in the main flow instead (the `open`
+ * attribute is stripped at build time, see tools/build.py), integrating
+ * the navigation model from an earlier NPPF Browser extension. Unscoped by
+ * the narrow-panel media query on purpose: nav stays hidden even if the
+ * panel is ever dragged past 1000px, rather than popping back as the
+ * desktop two-column sidebar's contents tree. */
+body.sidepanel .pn-hidden-nav{ display:none; }
+
+/* ============================================================
+ * Phase 5: compact, card-based content, porting the visual language of
+ * ../nppfbrowser (a flat, dense list of bordered cards) over newnppf's
+ * long-form single-column "reading edition" spacing. Deliberately
+ * UNSCOPED by the @media(max-width:1000px) block above -- unlike Phase 1's
+ * topbar (which only makes sense once the mobile-menu layout is active),
+ * density is a general preference for this panel, not something that
+ * should revert if it's ever dragged past 1000px.
+ * ============================================================ */
+
+/* -- tighter type scale. body's own `font:var(--fs)/var(--lh) var(--serif)`
+ * is what every paragraph's text size/leading actually comes from (`.tx`
+ * has no font-size of its own, it inherits this); `.mk`'s marker line-height
+ * is `var(--line)`, itself `calc(var(--fs) * var(--lh))` -- CSS custom
+ * properties are resolved where they're USED, not where they're declared,
+ * so overriding the two inputs here is enough to tighten both, nothing
+ * downstream needs touching. */
+body.sidepanel{ --fs:14px; --lh:1.5; }
+
+/* -- the doc column stops being its own bordered "page" (--card background,
+ * vertical rules) -- individual cards below sit directly on --paper instead,
+ * the same two-tier page/card contrast nppfbrowser uses (its --bg vs
+ * --surface). */
+body.sidepanel .doc{
+  background:transparent; border-inline:0; padding-block-start:14px;
+}
+/* margin-bottom, not just the existing padding-bottom+border-bottom --
+ * without it the first chapter's own top border sits flush against this
+ * rule with nothing between them (measured: 0px). */
+body.sidepanel .docmeta{ padding-bottom:14px; margin-bottom:16px; }
+body.sidepanel .docmeta .doctitle{ font-size:22px; }
+body.sidepanel .docmeta .docsub{ font-size:13px; margin-top:6px; }
+body.sidepanel .docmeta .sub{ margin-top:12px; }
+
+/* -- chapters/annexes become their own bordered, rounded card (like
+ * nppfbrowser's .chapter-item) instead of one long flowing section with
+ * 56px of top padding before the next chapter starts. */
+/* --paper, not --card: a policy/paragraph card (below) also sits on
+ * --card, and with both at the same tone the chapter box and the cards
+ * inside it read as one undifferentiated surface -- the border between
+ * them is the only thing doing the work. --card is reliably a shade
+ * *lighter* than --paper in both themes (nppf.css's own tokens), so
+ * chapters recede to the page's own tone while each card inside genuinely
+ * pops forward off it -- the two-tier page/card contrast this section's
+ * own comment already claimed, actually delivered at both tiers now. */
+body.sidepanel details.chapter{
+  margin:0 0 8px; padding:0; border:1px solid var(--rule2);
+  border-radius:10px; background:var(--paper);
+}
+/* only when open -- unconditional padding-bottom here would reserve empty
+ * space below a CLOSED chapter's summary too (padding is intrinsic to the
+ * box, whether or not the rest of its content is currently display:none),
+ * undoing the tight closed-accordion list this is meant to produce. */
+body.sidepanel details.chapter[open]{ padding-bottom:12px; }
+body.sidepanel details.chapter > summary{
+  padding:11px 14px; margin:0; border-radius:10px;
+}
+body.sidepanel details.chapter[open] > summary{
+  border-bottom:1px solid var(--rule2); border-radius:10px 10px 0 0;
+}
+body.sidepanel details.chapter > summary:hover{ background:var(--tint); }
+/* NB: no container-level padding-inline here. An earlier version of this
+ * gutter used exactly that (`details.chapter > :not(summary){padding-
+ * inline:14px}`), and it silently failed for every card below: .policy/
+ * .node already declare their own `padding` (needed either way, for their
+ * *internal* text inset), which -- being more specific -- always wins over
+ * a container's padding-inline for the same physical left/right
+ * properties. Padding on a container only ever insets elements that have
+ * no competing padding of their own; it can't reach a card's own
+ * already-padded box at all. .secgrp/.subgrp are instead left as fully
+ * transparent grouping divs (no margin, no padding), and every actual
+ * visual element -- card or not -- carries its own `margin-inline:14px`
+ * below, so the gutter is uniform (14px from whatever chapter box it's
+ * ultimately inside) regardless of how many transparent wrappers sit
+ * between them, and never compounds the way nesting two padded containers
+ * would have. */
+body.sidepanel .chapter-h{
+  margin:0; padding-bottom:0; border-bottom:0; font-size:16px; line-height:1.3;
+}
+/* the chapter number becomes a small pill badge, like nppfbrowser's
+ * ch-num. `:not(.annex)` keeps annexes on their existing distinct
+ * "ANNEX A" label style -- nppf.css's `.annex .chapter-h .cn` rule reads
+ * as MORE specific by class count alone, but a plain `.chapter-h .cn`
+ * selector here would still outrank it once `body` (an extra element) is
+ * added to the comparison, since element count is the tiebreaker once
+ * class counts are equal -- so annexes have to be excluded explicitly
+ * rather than trusted to lose the cascade on their own. */
+body.sidepanel .chapter:not(.annex) .chapter-h .cn{
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:24px; height:22px; padding:0 6px; margin-right:1px;
+  border-radius:6px; background:var(--tint); color:var(--accent);
+  font:700 12px/1 var(--sans); vertical-align:middle;
+}
+/* the policy-code range appended by panel.js after a policy-carrying
+ * chapter's title ("... (S1-6)") -- muted and a size down from the title
+ * itself so it reads as a secondary detail, not a second heading, but
+ * still visible on the closed accordion row where it's actually useful:
+ * seeing which chapter has S5 without opening every one to check. */
+body.sidepanel .pn-policy-range{
+  font-size:13px; font-weight:400; color:var(--ink3);
+}
+
+/* -- policies become individual cards (title + all its numbered content as
+ * one box); section groupings and annex paragraphs that aren't part of a
+ * policy (the introduction, Annex B's glossary entries, Annex D/F's
+ * subhead-grouped paragraphs) become their own standalone cards too --
+ * matching nppfbrowser's one-card-per-paragraph browsing view. Scoped to
+ * DIRECT children only (">") so a sub-item nested inside a policy's own
+ * .kids doesn't also get boxed -- only the outermost unit per
+ * policy/section does; everything inside one card keeps flowing normally. */
+body.sidepanel .policy,
+body.sidepanel .chapter > .node,
+body.sidepanel .secgrp > .node,
+body.sidepanel .subgrp > .node{
+  margin:0 14px 8px; padding:12px 14px; border:1px solid var(--rule);
+  border-radius:8px; background:var(--card);
+}
+/* nppf.css's own "first policy in a section" special case (removing the
+ * old flowing top-border, since a section heading already separated it)
+ * is more specific than the rule above and irrelevant to a boxed card --
+ * restore full padding so it isn't left with a thinner top than every
+ * other card. */
+body.sidepanel .secgrp > .policy:first-of-type{ padding-top:12px; }
+body.sidepanel .policy-h{ margin:0 0 8px; font-size:16px; }
+body.sidepanel .node>.row{ margin:6px 0; }
+body.sidepanel .kids{ margin-left:24px; }
+body.sidepanel .subitem .kids{ margin-left:20px; }
+/* the non-card content of a chapter -- section labels, the objective
+ * disclosure, the footnote list, an annex subhead -- gets the same 14px
+ * gutter as every card above, but via margin on each of these leaf
+ * elements themselves rather than padding on whatever transparent .secgrp/
+ * .subgrp happens to wrap them (see the note above the card rule). */
+body.sidepanel .section-h{ margin:16px 14px 6px; }
+body.sidepanel .objective{ margin:14px 14px 6px; }
+body.sidepanel .subhead{ margin:14px 14px 6px; }
+body.sidepanel .fnlist{ margin-inline:14px; }
+body.sidepanel .tblwrap{ margin:10px 14px 12px; }
+
+/* -- the :target / S4-S5-refusal accent bar used to sit in the *margin*
+ * outside the text column (`left:-17px`), which assumed the old design's
+ * generous page gutter. Individual cards don't have one: at .doc's 14px
+ * inline padding, that bar would land 3px past the viewport edge, clipped.
+ * `box-shadow:inset` never extends outside its own element's box regardless
+ * of how little padding is available, so it replaces the absolute bar
+ * cleanly for all three of the original selectors' targets, card or not
+ * (a nested paragraph inside a card has no border of its own, but the
+ * inset shadow still reads fine flush against it). */
+body.sidepanel .policy:target::before,
+body.sidepanel .node:target>.row::before,
+body.sidepanel .fn:target::before,
+body.show-refusal.sidepanel .policy[data-refusal]::after{
+  content:none;
+}
+body.sidepanel .policy:target,
+body.sidepanel .node:target>.row,
+body.sidepanel .fn:target{
+  box-shadow:inset 3px 0 0 var(--accent);
+}
+/* NB: one compound selector (`body.show-refusal.sidepanel`), not two
+ * ancestor `body`s -- both classes land on the same single <body> element,
+ * they don't nest. `body.sidepanel body.show-refusal ...` would require a
+ * second, descendant <body>, which never exists, and silently never
+ * matches anything. */
+body.show-refusal.sidepanel .policy[data-refusal]{
+  box-shadow:inset 3px 0 0 var(--refusal);
+}
+
+/* Every other .node has a .mk marker column (a number, letter, or bullet)
+ * providing 39px of clearance before its text starts, so the 3px inset bar
+ * above always lands on empty space. .gloss and .node.note have no marker
+ * at all -- just a bare .tx.srch flush against .row's own left edge -- so
+ * the same bar landed directly on top of the text's first glyph, reported
+ * directly from a screenshot (the highlight visibly overlapping "Large-
+ * scale..." in a glossary entry). Fixed by reserving a permanent gutter on
+ * both, rather than only padding conditionally on :target -- that would
+ * shift the text sideways at the exact moment the highlight fires, which
+ * reads as worse than a small permanent indent that was there all along. */
+body.sidepanel .node.gloss>.row,
+body.sidepanel .node.note>.row{
+  padding-left:10px;
+}
+
+/* ============================================================
+ * Phase 7: Annex B glossary -- letter headings + a defused A-Z bar.
+ * ============================================================ */
+
+/* One per letter, inserted by panel.js immediately before that letter's
+ * first entry. A heading, not a card -- distinct from both .section-h
+ * (all-caps sans, for group labels like "PLAN-MAKING POLICIES") and a
+ * .gloss card's own serif body text, so it reads at a glance as "you're
+ * now in the Bs" while scanning, without competing with either. */
+body.sidepanel .pn-gloss-letter{
+  margin:20px 14px 8px; padding-bottom:4px; font:700 17px/1 var(--serif);
+  color:var(--accent); border-bottom:1px solid var(--rule2);
+}
+/* the very first letter shouldn't add extra top gap on top of the .azbar's
+ * own margin just above it */
+body.sidepanel .azbar + .pn-gloss-letter{ margin-top:12px; }
+
+/* Phase 7 originally suppressed :target highlighting for every .gloss
+ * entry here, as belt-and-braces alongside repointing the A-Z bar at
+ * neutral letter headings instead of an arbitrary first term -- on the
+ * reasoning that "nothing should link to a specific .gloss id any more".
+ * Phase 13 makes that reasoning stale: it deliberately links specific
+ * defined terms in the main document straight to their own .gloss entry,
+ * and that link is exactly the "this is what you asked for" case :target
+ * highlighting exists for elsewhere (a search result, a footnote, a
+ * cross-reference) -- the A-Z bar's landing was the arbitrary one, not
+ * every possible way of reaching a glossary entry. That original problem
+ * stays fixed at its actual root (the repointed bar can't trigger
+ * `.gloss:target` at all, since a heading isn't a .gloss element), so the
+ * blanket suppression is removed rather than carried forward now that it
+ * would just as readily swallow the highlight this phase's own links
+ * earn.
+ */
+
+/* ============================================================
+ * Phase 9: cross-reference links + Back control.
+ * ============================================================ */
+
+/* No colour/weight overrides needed -- nppf.css's own base `a{color:var(
+ * --accent);text-decoration-thickness:1px;text-underline-offset:2px}`
+ * already gives a plain <a> exactly the treatment these want. Just a
+ * hover affordance, matching the same pattern already used for footnote
+ * markers (`sup.fnref a:hover{background:var(--mark)...}`). */
+body.sidepanel .pn-xref:hover{
+  background:var(--tint); border-radius:2px;
+}
+
+/* ============================================================
+ * Phase 13: defined-term links to Annex B glossary entries.
+ * ============================================================ */
+
+/* A dotted underline, not the solid one .pn-xref and nppf.css's own base
+ * `a{}` already give every other link -- the same solid/dotted
+ * convention often used to tell "jumps to another destination" links
+ * apart from "look up what this word means" ones (closer to how a native
+ * <dfn>/<abbr> reads). Both link types share the same accent colour
+ * (inherited from the base `a{}` rule, deliberately not overridden here)
+ * so they still read as "the same kind of thing" at a glance -- only the
+ * underline style tells them apart on closer look. */
+body.sidepanel .pn-gloss-ref{
+  text-decoration-style:dotted; text-decoration-thickness:1px;
+}
+body.sidepanel .pn-gloss-ref:hover{
+  background:var(--tint); border-radius:2px;
+}
+
