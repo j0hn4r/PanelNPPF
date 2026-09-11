@@ -125,7 +125,7 @@
   // it still reads in a sensible position for anyone not looking at the
   // CSS-driven layout -- a screen reader in source order, e.g.
   const modebar = document.querySelector('.modebar');
-  if (modebar && !document.querySelector('.pn-filters-label')) {
+  if (modebar) {
     const label = document.createElement('div');
     label.className = 'pn-filters-label';
     label.textContent = 'Filters';
@@ -140,6 +140,17 @@
   // anchor -- only background.js normalises the raw string, this file is
   // the only place with the DOM to confirm the code actually exists.
   const POLICY_CODE_RE = /^(PM|DM|S|CC|HO|E|TC|CO|W|M|L|GB|DP|TR|HC|P|F|N|HE)\d{1,2}$/i;
+
+  // Shared by handleLookup and Phase 14's search-jump below: normalises
+  // whitespace and checks the shape only, returning the uppercased code or
+  // null. Existence against the live DOM is deliberately left to each call
+  // site, since they need different checks for different reasons (see
+  // Phase 14's own comment on why it can't reuse handleLookup's
+  // `[data-policy]` query as-is).
+  function matchPolicyCode(raw) {
+    const compact = raw.replace(/\s+/g, '');
+    return POLICY_CODE_RE.test(compact) ? compact.toUpperCase() : null;
+  }
 
   // Phase 4 note: the search box and #count both live in the always-visible
   // topbar now (not the filters dropdown), so none of these need to open
@@ -170,25 +181,27 @@
       focusSearchInput();
       return;
     }
-    const compact = q.replace(/\s+/g, '');
-    const m = compact.match(POLICY_CODE_RE);
-    if (m) {
-      const code = compact.toUpperCase();
-      if (document.querySelector('[data-policy="' + code + '"]')) {
-        jumpToPolicy(code);
-        return;
-      }
+    const code = matchPolicyCode(q);
+    if (code && document.querySelector('[data-policy="' + code + '"]')) {
+      jumpToPolicy(code);
+      return;
     }
     runSearch(q);
+  }
+
+  // Shared by both the cold-panel read below and the warm-panel listener:
+  // once a pending lookup is found, consuming it is the same three steps
+  // either way.
+  function consumeLookup(pending) {
+    if (!pending) return;
+    chrome.storage.session.remove('pendingLookup');
+    handleLookup(pending.q || '');
   }
 
   function consumePendingLookup() {
     if (!(window.chrome && chrome.storage && chrome.storage.session)) return;
     chrome.storage.session.get('pendingLookup', (result) => {
-      const pending = result && result.pendingLookup;
-      if (!pending) return;
-      chrome.storage.session.remove('pendingLookup');
-      handleLookup(pending.q || '');
+      consumeLookup(result && result.pendingLookup);
     });
   }
 
@@ -200,10 +213,7 @@
   if (window.chrome && chrome.storage && chrome.storage.onChanged) {
     chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName !== 'session' || !changes.pendingLookup) return;
-      const pending = changes.pendingLookup.newValue;
-      if (!pending) return;
-      chrome.storage.session.remove('pendingLookup');
-      handleLookup(pending.q || '');
+      consumeLookup(changes.pendingLookup.newValue);
     });
   }
 
@@ -249,7 +259,7 @@
   function addCiteButtons() {
     document.querySelectorAll('.policy').forEach((policyEl) => {
       const h3 = policyEl.querySelector(':scope > h3.policy-h');
-      if (!h3 || h3.querySelector('.pn-cite-btn')) return;
+      if (!h3) return;
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'pn-cite-btn';
@@ -399,13 +409,18 @@
 
   // ---------- policy-code range on each policy-carrying chapter's title ----------
 
+  // Every numbered (non-annex) chapter, queried once and reused by the
+  // Contents box below too -- the set doesn't change between here and
+  // there, nothing in this file adds or removes a chapter.
+  const numberedChapters = document.querySelectorAll('details.chapter:not(.annex)');
+
   // Every numbered chapter that carries policies at all carries exactly
   // one prefix, numbered with no gaps (PM1-17, S1-6, GB1-8, ...) --
   // checked directly against the source rather than assumed. Read
   // straight off each chapter's own [data-policy] attributes rather than
   // hand-maintaining a chapter->range table that would silently drift the
   // next time the source PDF changes.
-  document.querySelectorAll('details.chapter:not(.annex)').forEach((chapter) => {
+  numberedChapters.forEach((chapter) => {
     const policies = chapter.querySelectorAll('.policy[data-policy]');
     if (!policies.length) return; // the introduction, and any chapter with none
 
@@ -489,6 +504,36 @@
     return prefix + num + subparts.replace(/\(([0-9a-z]+)\)/gi, '-$1');
   }
 
+  // Shared by every pass below that walks a .srch element's text nodes to
+  // splice in new <a>s (Phase 9's two cross-reference passes, Phase 13's
+  // glossary-term pass): collecting the node list is identical work each
+  // time, since only the filter/regex differs per pass, never how a
+  // TreeWalker is driven.
+  function collectTextNodes(el) {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    let tn;
+    while ((tn = walker.nextNode())) nodes.push(tn);
+    return nodes;
+  }
+
+  // nppf.js snapshots every .srch element's *original* innerHTML once at
+  // load (`el.dataset.orig = el.innerHTML`, before this script even starts)
+  // to restore verbatim after a cleared search. Left alone, that snapshot
+  // is the pre-link text -- the first search-then-clear a reader does
+  // would silently wipe any spliced-in links back out. Re-snapshotting only
+  // what a pass actually touched is enough: nppf.js's own restore reads
+  // dataset.orig fresh each time, not a cached copy.
+  function resnapshotOrig(touched) {
+    touched.forEach((el) => { el.dataset.orig = el.innerHTML; });
+  }
+
+  // The set of .srch elements itself never changes across the passes below
+  // -- each one only ever replaces text *nodes* inside them, never adds or
+  // removes a .srch-classed container -- so it's queried once and reused
+  // rather than re-queried from the live DOM on every pass.
+  const srchEls = document.querySelectorAll('.doc .srch');
+
   // Same technique nppf.js's own highlight() already uses for <mark>:
   // walk each .srch element's text nodes (never innerHTML-replace a whole
   // element, which would also clobber unrelated markup already inside it
@@ -496,11 +541,8 @@
   // a mixed fragment of plain text and new <a>s only where something
   // actually matched.
   const touchedSrch = new Set();
-  document.querySelectorAll('.doc .srch').forEach((el) => {
-    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-    const textNodes = [];
-    let tn;
-    while ((tn = walker.nextNode())) textNodes.push(tn);
+  srchEls.forEach((el) => {
+    const textNodes = collectTextNodes(el);
 
     textNodes.forEach((node) => {
       const t = node.nodeValue;
@@ -571,11 +613,8 @@
   const BARE_CODE_RE = new RegExp(
     '\\((' + PREFIX_ALT + ')(\\d{1,2})((?:\\([0-9a-z]+\\)){0,3})\\)', 'g'
   );
-  document.querySelectorAll('.doc .srch').forEach((el) => {
-    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-    const textNodes = [];
-    let tn;
-    while ((tn = walker.nextNode())) textNodes.push(tn);
+  srchEls.forEach((el) => {
+    const textNodes = collectTextNodes(el);
 
     textNodes.forEach((node) => {
       // Skip text nppf.js's own footnote markup or the pass above already
@@ -619,15 +658,10 @@
     });
   });
 
-  // nppf.js snapshots every .srch element's *original* innerHTML once at
-  // load (`el.dataset.orig = el.innerHTML`, run before this script even
-  // starts) to restore verbatim after a cleared search. Left alone, that
-  // snapshot is the pre-link text -- the first search-then-clear a reader
-  // does would silently wipe every cross-reference link back out. Only
-  // elements either pass above actually changed need re-snapshotting;
-  // nppf.js's own restore reads dataset.orig fresh each time, not a cached
-  // copy, so this is enough to make the links durable across searches too.
-  touchedSrch.forEach((el) => { el.dataset.orig = el.innerHTML; });
+  // Only elements either pass above actually changed need re-snapshotting
+  // -- see resnapshotOrig's own comment for why this is enough to make the
+  // links durable across a search-then-clear too.
+  resnapshotOrig(touchedSrch);
 
   // A Back control: the panel has no browser chrome of its own offering
   // one, but a hash-only jump (a cross-reference above, a search result,
@@ -703,6 +737,22 @@
     revealFromBookmarkFilter(document.getElementById(link.getAttribute('href').slice(1)));
   });
 
+  // Shared by the hashchange handler below and forceVisible (Phase 14):
+  // walk up from a target opening any closed <details> ancestor, the same
+  // way a fresh #fragment navigation into a *nested* target already would
+  // natively -- needed explicitly here because the target itself can *be*
+  // a closed chapter's content, which native auto-expand doesn't reach
+  // (confirmed separately, Phase 11: auto-expand only ever reaches an
+  // ancestor of a target nested inside a closed <details>, never a target
+  // a closed <details> itself is).
+  function openAncestorDetails(el) {
+    let node = el;
+    while (node && node !== document.body) {
+      if (node.tagName === 'DETAILS') node.open = true;
+      node = node.parentElement;
+    }
+  }
+
   // `popstate` (not `hashchange`) is the one event that fires specifically
   // for history traversal -- Back/Forward, native or via the Back control
   // -- never for a plain forward `location.hash = …` assignment, which is
@@ -739,11 +789,7 @@
     const target = document.getElementById(location.hash.slice(1));
     if (!target) return;
     revealFromBookmarkFilter(target);
-    let node = target;
-    while (node && node !== document.body) {
-      if (node.tagName === 'DETAILS') node.open = true;
-      node = node.parentElement;
-    }
+    openAncestorDetails(target);
     target.scrollIntoView({ block: 'start' });
   });
 
@@ -797,9 +843,9 @@
     let node = el;
     while (node && node !== document.body) {
       node.classList.remove('hide');
-      if (node.tagName === 'DETAILS') node.open = true;
       node = node.parentElement;
     }
+    openAncestorDetails(el);
     el.querySelectorAll('.hide').forEach((d) => d.classList.remove('hide'));
   }
   let searchJumpTimer = null;
@@ -809,10 +855,8 @@
     // done its own hide/show pass by the time this fires -- otherwise it
     // would just re-hide the target a moment after this reveals it.
     searchJumpTimer = setTimeout(() => {
-      const compact = searchInput.value.replace(/\s+/g, '');
-      const m = compact.match(POLICY_CODE_RE);
-      if (!m) return;
-      const code = compact.toUpperCase();
+      const code = matchPolicyCode(searchInput.value);
+      if (!code) return;
       // getElementById, not `[data-policy="…"]` -- Phase 4 hid #nav's own
       // 131-policy tree (.pn-hidden-nav, display:none) rather than removing
       // it, and its <li> elements carry the *same* data-policy attribute as
@@ -871,7 +915,7 @@
     toc.appendChild(a);
   }
 
-  document.querySelectorAll('details.chapter:not(.annex)').forEach(addTocLink);
+  numberedChapters.forEach(addTocLink);
   const annexes = document.querySelectorAll('details.chapter.annex');
   if (annexes.length) {
     const divider = document.createElement('div');
@@ -984,9 +1028,12 @@
   //
   // Terms are read from the live glossary itself, never a hand-maintained
   // duplicate list, so this can't silently drift from Annex B's own
-  // content the next time the source PDF changes.
+  // content the next time the source PDF changes. Reuses glossEntries
+  // (collected above for the A-Z bar repoint) rather than re-querying --
+  // `:scope > .node.gloss` and `#annexB .node.gloss` return the same set,
+  // since every glossary entry is a direct child of #annexB.
   const glossaryTerms = [];
-  document.querySelectorAll('#annexB .node.gloss').forEach((entry) => {
+  glossEntries.forEach((entry) => {
     const raw = entry.dataset.term || '';
     // Strip a trailing digit run some entries carry as a data artifact
     // (e.g. "Major development71", matching id="g-major-development71" --
@@ -1026,17 +1073,14 @@
     }
 
     const touchedGlossSrch = new Set();
-    document.querySelectorAll('.doc .srch').forEach((el) => {
+    srchEls.forEach((el) => {
       if (el.closest('#annexB')) return; // never link the glossary to itself
       const unit = findUnit(el);
       if (!unit) return; // nothing to track "already seen in this unit" against
       let seenIds = linkedInUnit.get(unit);
       if (!seenIds) { seenIds = new Set(); linkedInUnit.set(unit, seenIds); }
 
-      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-      const textNodes = [];
-      let tn;
-      while ((tn = walker.nextNode())) textNodes.push(tn);
+      const textNodes = collectTextNodes(el);
 
       textNodes.forEach((node) => {
         // Don't relink text already inside a link this page added (a
@@ -1079,9 +1123,6 @@
       });
     });
 
-    // Same reason as Phase 9: nppf.js snapshots every .srch element's
-    // *original* innerHTML once at load to restore verbatim after a
-    // cleared search. Re-snapshot only what this pass actually changed.
-    touchedGlossSrch.forEach((el) => { el.dataset.orig = el.innerHTML; });
+    resnapshotOrig(touchedGlossSrch);
   }
 })();
