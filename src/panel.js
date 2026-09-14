@@ -637,6 +637,10 @@
     openAncestorDetails(el);
     el.querySelectorAll('.hide').forEach((d) => d.classList.remove('hide'));
   }
+  // Remembers whichever policy the search box last jumped to, so clearing
+  // the search can put the reader back on it -- see the #clr handler below
+  // for why that's needed at all.
+  let lastSearchJumpCode = null;
   let searchJumpTimer = null;
   searchInput.addEventListener('input', () => {
     clearTimeout(searchJumpTimer);
@@ -644,12 +648,12 @@
     // already run by the time this fires.
     searchJumpTimer = setTimeout(() => {
       const code = matchPolicyCode(searchInput.value);
-      if (!code) return;
+      if (!code) { lastSearchJumpCode = null; return; }
       // getElementById, not `[data-policy="…"]` -- the hidden #nav tree
       // carries the same attribute on unrelated <li> elements and would
       // win a querySelector by document order.
       const target = document.getElementById(code);
-      if (!target || !target.classList.contains('policy')) return;
+      if (!target || !target.classList.contains('policy')) { lastSearchJumpCode = null; return; }
       revealFromBookmarkFilter(target);
       forceVisible(target);
       jumpToPolicy(code);
@@ -658,8 +662,39 @@
       // scroll decides barely any scrolling is needed. This always aligns
       // the target's top edge to the viewport top instead.
       target.scrollIntoView({ block: 'start' });
+      lastSearchJumpCode = code;
     }, 170);
   });
+
+  // Reported directly: searching a policy code correctly jumps there, but
+  // clearing the search afterward (nppf.js's own clearAll(), via #clr)
+  // reveals every policy the search had hidden, changing the page's
+  // overall height right under the reader -- whatever was at their
+  // current scrollY shifts to a different, often adjacent, policy (S5
+  // clears to land on S4, its immediate neighbour). #clr's own click
+  // handler (nppf.js, registered first, since nppf.js loads before this
+  // file) has already run clearAll() synchronously by the time this
+  // listener -- added after it, on the same element -- fires, so the page
+  // has already reflowed to its full height here; scrolling the
+  // remembered target back into view lands correctly against that new
+  // layout rather than the old one.
+  const clrBtn = document.getElementById('clr');
+  if (clrBtn) {
+    clrBtn.addEventListener('click', () => {
+      const code = lastSearchJumpCode;
+      lastSearchJumpCode = null;
+      if (!code) return;
+      const target = document.getElementById(code);
+      // `behavior: 'instant'` deliberately overrides the page's own
+      // `html{scroll-behavior:smooth}`. A smooth scroll only starts
+      // animating on the next frame, so the reflow above would paint once
+      // first at the old, now-wrong scrollY (a visible jump), then glide
+      // back to the target -- distracting motion on top of a correction
+      // that should be invisible when it's landing back where the reader
+      // already was.
+      if (target) target.scrollIntoView({ block: 'start', behavior: 'instant' });
+    });
+  }
 
   // ---------- Contents: a compact chapter/annex jump list ----------
 

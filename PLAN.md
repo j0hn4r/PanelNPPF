@@ -761,7 +761,53 @@ paperwork, not a rewrite**.
   link, never scrolled away from) still restores via the hash path
   exactly as before, `:target` highlight included; link counts and the
   earlier chapter-reopen fix both re-verified unchanged.
-- ⬜ Phase 16 (sync.py, README/CLAUDE.md, store-readiness pass)
+- ✅ **Phase 16** — reported directly: "if I search for a policy like S5 it
+  will take me there but if I then clear the search bar it bounces me up to
+  S4." Same recurring pattern as Phase 15 and the Phase 13/14 bookmark-filter
+  fixes: nppf.js's own `clr` handler (bound to `#clr`, firing `clearAll()`)
+  reveals every policy the search had hidden, changing the page's overall
+  height right under the reader -- whatever sat at their current `scrollY`
+  shifts to a different, often adjacent, policy once the layout reflows.
+  Fixed by tracking which policy (if any) Phase 14's own search-jump last
+  landed on in `lastSearchJumpCode`, and adding a second `#clr` click
+  listener, registered after nppf.js's own (nppf.js loads first, so its
+  synchronous `clearAll()` has already finished reflowing the page by the
+  time this one runs) -- it re-derives the target via
+  `document.getElementById(code)` and calls `scrollIntoView({block:'start'})`
+  against the now-fully-reflowed layout, rather than trying to preserve or
+  compute a pixel offset across the reflow directly. `lastSearchJumpCode` is
+  cleared whenever the search box no longer resolves to a real policy code,
+  so an ordinary text search's own clear is untouched. Verified end-to-end:
+  searching "S5" and clearing the search box leaves the S5 card in view
+  (previously landed on S4); a normal text search ("green belt") followed by
+  clearing shows no change in behaviour; link counts unchanged (146
+  cross-reference / 327 glossary links, 131 citation buttons).
+
+  **A follow-up report, one screenshot-visible symptom short of "fixed":**
+  the reader stayed on the right policy after clearing, but reaching it now
+  visibly jumped away first and scrolled back, distracting even though the
+  end position was correct. Root cause: `html{scroll-behavior:smooth}`
+  applies to every scroll on the page, `scrollIntoView` included -- calling
+  it without an explicit `behavior` only *schedules* an animation starting
+  next frame, it doesn't move `scrollTop` synchronously. `clearAll()`'s
+  reflow and this correction both run in the same click handler, so the
+  reflow's own effect (the same numeric `scrollY` now pointing at different,
+  wrong content, since the page changed height under it) is what actually
+  paints first; the smooth animation then visibly glides from there to the
+  target over the following frames -- the "jump, then scroll back" reported.
+  Fixed with `behavior: 'instant'` on this one corrective call, which
+  overrides the page's own smooth-scroll CSS and lands synchronously in the
+  same task as the reflow, so only the corrected position ever paints.
+  Confirmed directly, not by eye: reading `window.scrollY` and the target's
+  `getBoundingClientRect().top` immediately after the click (no wait at all)
+  already showed the fully-corrected position (78px clearance, matching
+  every other jump's `scroll-margin-top`) rather than a stale value that
+  only settled after further frames. Deliberately scoped to this one
+  correction -- the search-jump itself and other `scrollIntoView` calls in
+  this file are a normal forward navigation with nothing to visually
+  "undo" beforehand, where the smooth glide is the desired feel, not a
+  side effect to suppress.
+- ⬜ Phase 17 (sync.py, README/CLAUDE.md, store-readiness pass)
 
 **Still unverified regardless of phase, and can't be from here:** this has
 never been loaded as an actual unpacked Chrome extension
@@ -1429,23 +1475,3 @@ Run after Phase 0 and again after every phase:
   merge on load. Extension-origin `localStorage` is durable enough that this
   can wait.
 - An options page. Nothing yet needs configuring.
-
-## 12. Known issues (not yet fixed)
-
-- **Clearing a policy-code search strands the reader's scroll position.**
-  Reported directly: searching a policy code (Phase 14) correctly scrolls
-  to that policy, but nppf.js's own search then hides every other policy
-  that doesn't contain the query text — reasonable for search generally,
-  but it means the reader can't scroll around or check neighbouring
-  policies while still "at" the one they searched for, without clearing
-  the search first. Clearing it (the `×` button) does bring every policy
-  back, but nppf.js's own `clr` handler doesn't preserve scroll position
-  across that reveal — the reappearing content shifts the layout under the
-  reader, moving them away from the policy they were just looking at. The
-  fix likely needs the same shape as Phase 15's chapter-reopen fix and the
-  bookmark-filter scroll fixes in Phase 13/14 (PLAN.md's own recurring
-  pattern: a remembered position is only meaningful once the layout it was
-  recorded against exists again) — e.g. remembering the searched-for
-  policy's id across a clear and re-scrolling to it afterward, likely by
-  hooking `#clr`'s click alongside nppf.js's own handler rather than
-  editing nppf.js itself.
