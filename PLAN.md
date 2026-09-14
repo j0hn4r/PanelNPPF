@@ -807,21 +807,139 @@ paperwork, not a rewrite**.
   this file are a normal forward navigation with nothing to visually
   "undo" beforehand, where the smooth glide is the desired feel, not a
   side effect to suppress.
-- ⬜ Phase 17 (sync.py, README/CLAUDE.md, store-readiness pass)
+- ✅ **Phase 17** — the store-readiness pass this repo's own trailing
+  placeholder had been pointing at since Phase 10: `tools/sync.py`,
+  `README.md`, this file, and everything needed to actually submit to the
+  Chrome Web Store.
+
+  **`tools/sync.py`** refreshes `vendor/` from `../newnppf` and re-stamps
+  `upstream.lock` (source, sha256, byte count, vendored-at date, upstream
+  git commit) — the one script in this repo that reaches outside it, exactly
+  as §4 always specified. Verified against the current, unchanged upstream:
+  re-running it left `upstream.lock`'s sha256 identical (only the
+  `vendored_at` date moved), and a subsequent `build.py` still reported
+  "upstream.lock matches".
+
+  **`README.md`** and **`CLAUDE.md`** written for, respectively, a human
+  landing on the repo and a future Claude Code session working in it —
+  the latter following `../newnppf`'s own `CLAUDE.md` structure (Commands,
+  the one rule that matters, Layout, a "where to make a change" table,
+  traps that have already bitten us), condensing this whole PLAN.md's worth
+  of debugging traps (the smooth-scroll/cached-details-rect/visibilityState/
+  port-caching quirks that cost real time across Phases 10-16) into the
+  handful most likely to bite again.
+
+  **A real bug caught while writing the store listing copy, not before:**
+  `manifest.json`'s `description` was 138 characters against a hard
+  132-character limit — Chrome enforces this at both `Load unpacked` and
+  Web Store upload by rejecting the manifest outright, not by silently
+  truncating it. Would have blocked shipping entirely. Fixed by shortening
+  the description (still says exactly what it said, four fewer words) and
+  the §8 manifest snippet updated to match, with the limit itself noted
+  there so it doesn't get silently blown again by a future edit. Also added
+  `homepage_url` pointing at the public GitHub repo, which Chrome shows as
+  the extension's homepage link in `chrome://extensions` details and on the
+  store listing.
+
+  **`PRIVACY.md`** — required content for the Dashboard's Privacy practices
+  tab even though this extension collects, transmits, and sells nothing: no
+  network request of any kind, everything it remembers (reading position,
+  bookmarks, the context-menu handoff) stays in `chrome.storage`/
+  `localStorage` on-device. Written to be checked against the actual code
+  each time a future change touches storage, not just written once and
+  forgotten. The rendered file on GitHub (a public repo) doubles as the
+  Dashboard's required Privacy Policy URL — no separate hosting needed.
+
+  **`store/STORE_LISTING.md`** — the actual submission copy (title, summary,
+  long description, category, single-purpose statement, one-line
+  justification per permission, the "no data usage" checklist) ready to
+  paste into the Dashboard, plus the handful of fields only the account
+  owner can decide (support email, publisher display name, distribution
+  visibility) called out explicitly as **[fill in]** rather than guessed at.
+
+  **Screenshots** (`store/screenshots/`, 1280×800): two HTML mockups
+  (`store/screenshot-search.html`, `store/screenshot-menu.html`) each embed
+  the real, actual `dist/panel.html` in an iframe next to a plainly-fictional
+  "host page" (a mock case-officer report, a mock planning-statement draft)
+  giving the screenshot a realistic use-case frame — nothing about the
+  extension's own UI in either shot is staged or faked. **The Browser pane's
+  own screenshot tool turned out not to produce pixel-exact dimensions** —
+  requesting a 1280×800 viewport returned images at other sizes entirely
+  (800×500, then 800×600 from the same page, cropped rather than scaled),
+  unusable against the Web Store's exact-size requirement. Fixed by driving
+  a real, separately-launched headless Chrome instance directly over the
+  DevTools Protocol (`Emulation.setDeviceMetricsOverride` to force the
+  viewport, `Page.captureScreenshot` with an explicit `clip` rect), which
+  produced exact 1280×800 PNGs — confirmed by measuring the output file's
+  own pixel dimensions, not assumed from the request parameters.
+
+  **A real, separate trap hit getting the headless instance's `--screenshot`
+  flag working at all, then abandoned for the CDP approach above instead of
+  chased further:** Chrome's own `--screenshot=path` flag failed every time
+  with `Access is denied`, across multiple write targets and both with and
+  without `--no-sandbox` — never a working combination found, and not worth
+  more time once the CDP path above worked regardless (it also composes
+  better with driving page state before the capture, which `--screenshot`
+  alone can't do anyway).
+
+  **A real mistake, worth recording so it isn't repeated:** getting the
+  headless Chrome instance's remote-debugging port to accept a WebSocket
+  connection needed a relaunch (Chrome's own `--remote-allow-origins`
+  restriction), and the relaunch used `taskkill /F /IM chrome.exe` —
+  which kills **every** Chrome process on the machine, not just the
+  headless one just started. If a real, interactive Chrome window was open
+  at the time (this machine's own browser, or the one this project's own
+  automation tooling drives), it would have been force-closed along with
+  it, discarding whatever tabs/state it held. A targeted kill (by PID, or a
+  dedicated `--user-data-dir` plus tracking the specific process) is the
+  right tool for stopping one specific Chrome instance; reach for it first,
+  not the blunt system-wide kill, whenever Chrome needs restarting for this
+  kind of headless work again.
+
+  **The Web Store package**: `store/panelnppf-1.0.0.zip`, `dist/`'s contents
+  zipped at the archive root (not inside a `dist/` prefix, which the Web
+  Store rejects) — confirmed by listing the archive's own contents, not
+  assumed from the packaging command. Git-ignored, same as `dist/` itself;
+  regenerate with `python tools/build.py` then the one-liner in
+  `store/STORE_LISTING.md`.
+
+  **What Phase 17 could not do, and why — genuinely, not just untried:**
+  `chrome://` pages are unreachable by both this project's testing setup and
+  Claude's own browser-automation tooling (confirmed directly: navigating
+  Claude-in-Chrome to `chrome://extensions` returned "Cannot access a
+  chrome:// URL" on the very next screenshot attempt) — a deliberate
+  restriction, not a bug to work around. `Load unpacked` also ends in a
+  native OS folder picker, which no browser-level automation can drive
+  either way. **This means the actual `chrome.sidePanel`/`chrome.contextMenus`/
+  `chrome.storage.session` calls, and everything downstream of them, are
+  still exactly as unverified as the note below has said since Phase 2** —
+  nothing in this phase changed that, and nothing feasible from here could.
+  `store/STORE_LISTING.md` spells out the exact manual steps (load unpacked,
+  run the §9 QA matrix) as the one remaining gate before submitting, because
+  it is genuinely the one thing in this entire project that has to happen
+  by hand.
+
+- ⬜ Phase 18 — the actual Chrome Web Store submission: create/use a
+  developer account, upload `store/panelnppf-1.0.0.zip`, paste in
+  `store/STORE_LISTING.md`'s copy, fill in the **[fill in]** fields there,
+  and submit for review — none of which this repo or an automated session
+  can do on the account owner's behalf.
 
 **Still unverified regardless of phase, and can't be from here:** this has
 never been loaded as an actual unpacked Chrome extension
-(`chrome://extensions` → Load unpacked). Phase 2's DOM-side decision logic
-was tested by re-running the same code against the live page over
-`http://localhost`, where `window.chrome` doesn't exist — so the actual
-`chrome.sidePanel.open()`, `chrome.contextMenus.create()`/`onClicked`, and
-`chrome.storage.session` calls in `background.js`, plus panel.js's
-`consumePendingLookup`/`onChanged` wiring around them, are still unexercised
-end-to-end (cold-panel-open vs. warm-panel-already-open, the real context
-menu label, the `Alt+Shift+N` binding actually registering). Load `dist/` as
-an unpacked extension and run through the §9 QA matrix, particularly: right-click
-a selection → panel opens to the right place; the same with the panel
-already open; the keyboard command with nothing selected.
+(`chrome://extensions` → Load unpacked) — confirmed in Phase 17 to be
+outside what any automation available to this project can drive, not merely
+undone. Phase 2's DOM-side decision logic was tested by re-running the same
+code against the live page over `http://localhost`, where `window.chrome`
+doesn't exist — so the actual `chrome.sidePanel.open()`,
+`chrome.contextMenus.create()`/`onClicked`, and `chrome.storage.session`
+calls in `background.js`, plus panel.js's `consumePendingLookup`/`onChanged`
+wiring around them, are still unexercised end-to-end (cold-panel-open vs.
+warm-panel-already-open, the real context menu label, the `Alt+Shift+N`
+binding actually registering). Load `dist/` as an unpacked extension and run
+through the §9 QA matrix, particularly: right-click a selection → panel
+opens to the right place; the same with the panel already open; the
+keyboard command with nothing selected.
 
 ---
 
@@ -1406,6 +1524,8 @@ scroll offset (debounced) to `chrome.storage.local` and restores on load.
   "manifest_version": 3,
   "name": "NPPF 2026 Reader (unofficial)",
   "version": "1.0.0",
+  "description": "Search, bookmark and read the NPPF (Aug 2026) in Chrome's side panel. Unofficial reading edition, not published by MHCLG.",
+  "homepage_url": "https://github.com/j0hn4r/PanelNPPF",
   "minimum_chrome_version": "116",
   "permissions": ["sidePanel", "contextMenus", "storage"],
   "background": { "service_worker": "background.js" },
@@ -1420,6 +1540,10 @@ code** — about as clean a story as a Web Store reviewer can be given, and
 each maps to one visible feature: `sidePanel` is the UI, `contextMenus` the
 lookup entry point, `storage` the bookmarks and reading position.
 `minimum_chrome_version: 116` is the floor for `sidePanel.open()`.
+`description` has a hard 132-character limit (both Chrome and the Web Store
+enforce it, rejecting the manifest outright over it, not just truncating) —
+an earlier draft was 138 characters and would have failed both `Load
+unpacked` and a Web Store upload; caught and fixed as part of Phase 17.
 
 ## 9. QA matrix
 
@@ -1461,7 +1585,7 @@ Run after Phase 0 and again after every phase:
 | **12** | Menu layout pass: Filters above Contents, a proper section divider between them, filter-control margins aligned to 20px | two sections told apart only by a gap, and a silent 4px alignment mismatch |
 | **13** | Defined-term links from the main document to their own Annex B glossary entry, scoped to multi-word terms and first-occurrence-per-policy | having to leave a policy to go look up a term it just used |
 | **14** | Searching a policy's own code jumps straight to that policy, on top of the existing highlight-everywhere search | the actual policy getting lost among every other mention of its own code |
-| **15** | `sync.py` + `upstream.lock`, README, CLAUDE.md, icons, store-readiness pass | drifting silently from upstream |
+| **17** | `sync.py`, README, CLAUDE.md, privacy policy, store listing copy, screenshots, packaged zip | drifting silently from upstream, and a submission with no prepared assets |
 
 ## 11. Deliberately not in v1
 

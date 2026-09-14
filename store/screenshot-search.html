@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html,body{margin:0;padding:0;width:1280px;height:800px;overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:#dee1e6}
+  .browser{width:1280px;height:800px;display:flex;flex-direction:column;background:#dee1e6}
+  .tabstrip{height:40px;background:#dee1e6;display:flex;align-items:flex-end;padding:8px 8px 0}
+  .tab{background:#fff;border-radius:8px 8px 0 0;padding:9px 16px;font-size:13px;color:#3c4043;
+    display:flex;align-items:center;gap:8px;box-shadow:0 -1px 0 rgba(0,0,0,.04)}
+  .tab .favicon{width:14px;height:14px;border-radius:3px;background:#5f6368}
+  .toolbar{height:44px;background:#fff;display:flex;align-items:center;padding:0 12px;gap:10px;
+    border-bottom:1px solid #e0e0e0}
+  .navbtn{width:28px;height:28px;border-radius:50%;color:#5f6368;display:flex;align-items:center;
+    justify-content:center;font-size:16px}
+  .omnibox{flex:1;height:30px;background:#f1f3f4;border-radius:15px;display:flex;align-items:center;
+    padding:0 14px;font-size:13px;color:#3c4043;gap:8px}
+  .omnibox .lock{color:#5f6368;font-size:12px}
+  .toolbar-icons{display:flex;align-items:center;gap:14px;color:#5f6368;font-size:16px}
+  .ext-icon{width:26px;height:26px;border-radius:6px;background:#2f4132;color:#e9e4d8;
+    display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+  .body{flex:1;display:flex;background:#fff;min-height:0}
+  .page{flex:1;overflow:hidden;padding:40px 56px;color:#202124;min-width:0}
+  .page .kicker{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#5f6368;
+    margin-bottom:10px;font-weight:600}
+  .page h1{font-size:26px;margin:0 0 6px;color:#1a237e;font-weight:600}
+  .page .ref{color:#5f6368;font-size:14px;margin-bottom:28px}
+  .page .row{display:flex;gap:32px;margin-bottom:26px}
+  .page .field{flex:1}
+  .page .field .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#80868b;
+    margin-bottom:5px;font-weight:600}
+  .page .field .val{font-size:15px;color:#3c4043}
+  .page .card{border:1px solid #e8eaed;border-radius:8px;padding:20px 22px;margin-top:20px}
+  .page .card h3{margin:0 0 10px;font-size:14px;color:#3c4043}
+  .page .card p{margin:0 0 10px;font-size:13.5px;line-height:1.65;color:#5f6368}
+  .page .card p b{color:#3c4043}
+  .panel-wrap{width:400px;flex-shrink:0;border-left:1px solid #dadce0;box-shadow:-2px 0 8px rgba(0,0,0,.05);
+    overflow:hidden}
+  iframe{width:400px;height:100%;border:0;display:block}
+</style>
+</head>
+<body>
+  <div class="browser">
+    <div class="tabstrip">
+      <div class="tab"><span class="favicon"></span>Case PA/24/01827 — Planning Portal</div>
+    </div>
+    <div class="toolbar">
+      <div class="navbtn">&#8592;</div>
+      <div class="navbtn">&#8594;</div>
+      <div class="navbtn">&#8635;</div>
+      <div class="omnibox"><span class="lock">&#128274;</span>planningportal.example.gov.uk/applications/PA-24-01827</div>
+      <div class="toolbar-icons">
+        <div class="ext-icon">N</div>
+        <span>&#8942;</span>
+      </div>
+    </div>
+    <div class="body">
+      <div class="page">
+        <div class="kicker">Application PA/24/01827</div>
+        <h1>Erection of one dwelling outside the settlement boundary</h1>
+        <div class="ref">Land adj. Fox Covert Farm, Long Lane &middot; Received 12 Mar 2026</div>
+        <div class="row">
+          <div class="field"><div class="lbl">Case officer</div><div class="val">S. Whitfield</div></div>
+          <div class="field"><div class="lbl">Status</div><div class="val">Awaiting decision</div></div>
+          <div class="field"><div class="lbl">Target date</div><div class="val">7 May 2026</div></div>
+        </div>
+        <div class="card">
+          <h3>Officer's assessment (draft)</h3>
+          <p>The site lies wholly outside the defined settlement boundary. <b>Policy S5</b>
+             is therefore engaged, and the proposal must be judged against the specific
+             list of forms of development capable of approval in that location, together
+             with the design and landscape tests it sets out.</p>
+          <p>Members should note the site does not fall within any of the categories at
+             S5(1)(a)&ndash;(f), and no case for isolated dwellings under national policy
+             has been made in the supporting statement.</p>
+        </div>
+      </div>
+      <div class="panel-wrap"><iframe id="pf" src="../dist/panel.html"></iframe></div>
+    </div>
+  </div>
+</body>
+</html>

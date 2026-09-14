@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html,body{margin:0;padding:0;width:1280px;height:800px;overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:#dee1e6}
+  .browser{width:1280px;height:800px;display:flex;flex-direction:column;background:#dee1e6}
+  .tabstrip{height:40px;background:#dee1e6;display:flex;align-items:flex-end;padding:8px 8px 0}
+  .tab{background:#fff;border-radius:8px 8px 0 0;padding:9px 16px;font-size:13px;color:#3c4043;
+    display:flex;align-items:center;gap:8px;box-shadow:0 -1px 0 rgba(0,0,0,.04)}
+  .tab .favicon{width:14px;height:14px;border-radius:3px;background:#5f6368}
+  .toolbar{height:44px;background:#fff;display:flex;align-items:center;padding:0 12px;gap:10px;
+    border-bottom:1px solid #e0e0e0}
+  .navbtn{width:28px;height:28px;border-radius:50%;color:#5f6368;display:flex;align-items:center;
+    justify-content:center;font-size:16px}
+  .omnibox{flex:1;height:30px;background:#f1f3f4;border-radius:15px;display:flex;align-items:center;
+    padding:0 14px;font-size:13px;color:#3c4043;gap:8px}
+  .omnibox .lock{color:#5f6368;font-size:12px}
+  .toolbar-icons{display:flex;align-items:center;gap:14px;color:#5f6368;font-size:16px}
+  .ext-icon{width:26px;height:26px;border-radius:6px;background:#2f4132;color:#e9e4d8;
+    display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+  .body{flex:1;display:flex;background:#fff;min-height:0}
+  .page{flex:1;overflow:hidden;padding:40px 56px;color:#202124;min-width:0}
+  .page .kicker{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#5f6368;
+    margin-bottom:10px;font-weight:600}
+  .page h1{font-size:24px;margin:0 0 22px;color:#202124;font-weight:600}
+  .page p{font-size:14.5px;line-height:1.8;color:#3c4043;max-width:520px}
+  .page p+p{margin-top:16px}
+  .panel-wrap{width:400px;flex-shrink:0;border-left:1px solid #dadce0;box-shadow:-2px 0 8px rgba(0,0,0,.05);
+    overflow:hidden}
+  iframe{width:400px;height:100%;border:0;display:block}
+</style>
+</head>
+<body>
+  <div class="browser">
+    <div class="tabstrip">
+      <div class="tab"><span class="favicon"></span>Draft — Planning Statement.docx</div>
+    </div>
+    <div class="toolbar">
+      <div class="navbtn">&#8592;</div>
+      <div class="navbtn">&#8594;</div>
+      <div class="navbtn">&#8635;</div>
+      <div class="omnibox"><span class="lock">&#128274;</span>docs.example.com/d/planning-statement-draft</div>
+      <div class="toolbar-icons">
+        <div class="ext-icon">N</div>
+        <span>&#8942;</span>
+      </div>
+    </div>
+    <div class="body">
+      <div class="page">
+        <div class="kicker">Planning Statement — Draft</div>
+        <h1>4. Planning policy assessment</h1>
+        <p>This statement assesses the proposal against the development plan and
+           the National Planning Policy Framework (August 2026), with reference
+           to the Framework's national decision-making policies.</p>
+        <p>[Cursor] &mdash; drafting continues, cross-checking each paragraph
+           against the Framework in the side panel alongside this document.</p>
+      </div>
+      <div class="panel-wrap"><iframe id="pf" src="../dist/panel.html"></iframe></div>
+    </div>
+  </div>
+</body>
+</html>
