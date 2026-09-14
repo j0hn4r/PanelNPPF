@@ -919,6 +919,18 @@ paperwork, not a rewrite**.
   it is genuinely the one thing in this entire project that has to happen
   by hand.
 
+  **A follow-up, requested directly before submitting:** a link to this
+  repo and to the author's LinkedIn, in the footer. newnppf's own `.brand`
+  block (tagline + disclaimer, moved into the menu footer since Phase 1)
+  is licence-required content, not a place to fold unrelated attribution
+  into — so this is a second, separate `<p class="pn-links">` panel.js
+  appends as a sibling after it, same architectural rule as everything
+  else here (a runtime DOM injection, never a change to the vendored
+  block itself). Verified: both links render right under the disclaimer
+  with correct `href`/`target="_blank"`/`rel="noopener"`, and link counts
+  elsewhere in the document (146 cross-reference / 327 glossary / 131
+  citation) are unaffected.
+
 - ⬜ Phase 18 — the actual Chrome Web Store submission: create/use a
   developer account, upload `store/panelnppf-1.0.0.zip`, paste in
   `store/STORE_LISTING.md`'s copy, fill in the **[fill in]** fields there,

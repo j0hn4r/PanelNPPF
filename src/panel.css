@@ -106,6 +106,7 @@
   body.sidepanel .panel-brand h1{ display:none; } /* redundant once you're already inside the panel */
   body.sidepanel .panel-brand .tagline{ font-size:12px; margin:0 0 8px }
   body.sidepanel .panel-brand .disclaimer{ font-size:11px; margin:0 }
+  body.sidepanel .panel-brand .pn-links{ font-size:11px; margin:8px 0 0 }
 
   /* a little more reading width now the desktop sidebar chrome is gone */
   body.sidepanel .doc{ padding-inline:14px; }

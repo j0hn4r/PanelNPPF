@@ -36,6 +36,17 @@
   if (brand) {
     brand.classList.add('panel-brand');
     panelMenu.appendChild(brand);
+
+    // This extension's own attribution -- not part of newnppf's licence
+    // block above, so it's a separate paragraph appended after it, never
+    // folded into the disclaimer text itself.
+    const links = document.createElement('p');
+    links.className = 'pn-links';
+    links.innerHTML =
+      '<a href="https://github.com/j0hn4r/PanelNPPF" target="_blank" rel="noopener">Source on GitHub</a>' +
+      ' &middot; ' +
+      '<a href="https://www.linkedin.com/in/john-rowley-55a07489/" target="_blank" rel="noopener">Connect on LinkedIn</a>';
+    brand.appendChild(links);
   }
 
   // Hidden, not removed: nppf.js's own nav click handler and bookmark-star
