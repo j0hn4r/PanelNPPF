@@ -9,7 +9,7 @@ own.
 
 **Extension name** (from `manifest.json`, 45-char limit)
 ```
-NPPF 2026 Reader (unofficial)
+NPPF 2026 Side Panel
 ```
 
 **Summary** (from `manifest.json`'s `description`, 132-char limit)

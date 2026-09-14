@@ -1,4 +1,4 @@
-# Privacy policy — NPPF 2026 Reader (unofficial)
+# Privacy policy — NPPF 2026 Side Panel
 
 _Last updated: 2026-09-14_
 

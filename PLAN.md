@@ -1534,7 +1534,7 @@ scroll offset (debounced) to `chrome.storage.local` and restores on load.
 ```json
 {
   "manifest_version": 3,
-  "name": "NPPF 2026 Reader (unofficial)",
+  "name": "NPPF 2026 Side Panel",
   "version": "1.0.0",
   "description": "Search, bookmark and read the NPPF (Aug 2026) in Chrome's side panel. Unofficial reading edition, not published by MHCLG.",
   "homepage_url": "https://github.com/j0hn4r/PanelNPPF",
