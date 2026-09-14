@@ -219,9 +219,43 @@
   // reported directly as "scrolls me down to the bottom". Saving which
   // chapters were open lets the restore re-expand them first, so the page
   // has the same height it did when the position was recorded.
+  //
+  // A second, more common cause of the same symptom, reported separately:
+  // `location.hash` never clears itself on a manual scroll -- any earlier
+  // cross-reference/glossary/Contents click (or a search-jump) leaves it
+  // set indefinitely, with nothing to do with wherever the reader
+  // scrolls to afterward. Saving `hash` unconditionally meant a reader who
+  // clicked one link early on and then just read on by scrolling would
+  // reopen to that old click, not their actual last position -- however
+  // far away that old target happened to be, which reads as landing
+  // "at the bottom" whenever it happens to be late in the document. Only
+  // trusted as current if its target isn't sitting inside some other,
+  // now-closed chapter (checked by walking ancestors directly, not by
+  // measuring geometry -- Chromium keeps a *cached* layout rect for a
+  // closed <details>'s contents, so getBoundingClientRect/getClientRects
+  // on a hidden target both misleadingly report a real-looking box rather
+  // than an empty one) and is still on screen (within one viewport height
+  // of the top); otherwise treated as stale and ignored in favour of the
+  // scrollY/openChapters already captured below.
+  function insideClosedChapter(el) {
+    let node = el;
+    while (node && node !== document.body) {
+      if (node.tagName === 'DETAILS' && node.classList.contains('chapter') && !node.open) return true;
+      node = node.parentElement;
+    }
+    return false;
+  }
   function savePosition() {
     const openChapters = Array.from(document.querySelectorAll('details.chapter[open]')).map((d) => d.id);
-    positionStore.set({ hash: location.hash, scrollY: window.scrollY, openChapters, ts: Date.now() });
+    const hashTarget = location.hash && document.getElementById(location.hash.slice(1));
+    const hashIsCurrent = !!(hashTarget && !insideClosedChapter(hashTarget)
+      && Math.abs(hashTarget.getBoundingClientRect().top) < window.innerHeight);
+    positionStore.set({
+      hash: hashIsCurrent ? location.hash : '',
+      scrollY: window.scrollY,
+      openChapters,
+      ts: Date.now(),
+    });
   }
 
   function reopenChapters(ids) {

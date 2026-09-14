@@ -702,6 +702,65 @@ paperwork, not a rewrite**.
   reopened together; the existing hash-based restore path (reached via a
   cross-reference jump, unaffected by this change) still works unchanged;
   link counts, search-jump, and Contents navigation all re-verified.
+
+  **A second cause of the exact same symptom, reported directly right
+  after this shipped:** closing and reopening the panel after ordinary
+  reading (no bookmark filter involved this time) still landed far from
+  where the reader actually was -- "even if I was not near there
+  previously". Root cause: `location.hash` never clears itself on a
+  manual scroll. Every cross-reference, glossary, or Contents click sets
+  it, and it just sits there afterward with no relationship to wherever
+  the reader scrolls to next -- yet `savePosition()` saved it
+  unconditionally every time, and the restore always preferred a truthy
+  `hash` over `scrollY`. A reader who clicked exactly one link early in a
+  session and then read on by scrolling manually would reopen to that old
+  click, however far away it happened to be — which reads as "the bottom"
+  whenever the click happened to be late in the document, regardless of
+  where the reader actually ended up. Fixed by only trusting `hash` as
+  current if its target is both on screen (within one viewport height of
+  the top) and not sitting inside some other, now-closed chapter;
+  otherwise it's saved as empty and scrollY/openChapters (already fixed
+  above) take over.
+
+  **A real trap hit twice while verifying this, worth recording:**
+  checking "is the target still on screen" with
+  `getBoundingClientRect().top` alone very nearly shipped a broken fix --
+  Chromium keeps a *cached* layout rect for an element inside a closed
+  `<details>` (from before it closed), so both `getBoundingClientRect()`
+  and `getClientRects()` report a real-looking box for a target that's
+  actually completely hidden, rather than an empty one. Confirmed
+  directly by walking the ancestor chain and finding a closed
+  `<details class="chapter">` between the target and `<body>` while its
+  rect still read a plausible on-screen value. Fixed by checking ancestor
+  `<details>` state explicitly (`insideClosedChapter`) rather than
+  inferring visibility from geometry at all. Separately, initial testing
+  of this fix gave inconsistent, seemingly-random results across
+  otherwise-identical runs; tracked down to `document.visibilityState`
+  reading `"hidden"` throughout this whole session's testing environment
+  regardless of which tab is fronted, which makes Chrome throttle the
+  debounced save's `setTimeout` heavily and unpredictably -- resolved by
+  triggering saves through actual navigation (`beforeunload`, which fires
+  synchronously, no timer involved) rather than waiting out the debounce,
+  the same technique already relied on elsewhere in this file's own
+  verification history. A second, compounding false lead during the same
+  investigation: earlier readings kept showing the *old* code's behaviour
+  despite confirmed-correct source and a rebuilt `dist/`, traced to the
+  preview server's own port having accumulated browser HTTP cache across
+  this session's very extensive testing, immune even to a hard-refresh
+  key command; switching to a freshly-used port resolved it immediately.
+  Neither of these was a defect in the fix itself, but both cost real
+  time to tell apart from one, so recorded here rather than left to
+  resurface as "unexplained flakiness" later.
+
+  Verified end-to-end once these were untangled: a stale hash from an
+  earlier click is correctly discarded in favour of the actual
+  scrollY/openChapters once the reader has scrolled away from it (checked
+  by reproducing the exact reported path -- click a cross-reference,
+  scroll to a wholly different, later chapter, close and reopen); a hash
+  that's still genuinely current (closed immediately after following a
+  link, never scrolled away from) still restores via the hash path
+  exactly as before, `:target` highlight included; link counts and the
+  earlier chapter-reopen fix both re-verified unchanged.
 - ⬜ Phase 16 (sync.py, README/CLAUDE.md, store-readiness pass)
 
 **Still unverified regardless of phase, and can't be from here:** this has
@@ -1370,3 +1429,23 @@ Run after Phase 0 and again after every phase:
   merge on load. Extension-origin `localStorage` is durable enough that this
   can wait.
 - An options page. Nothing yet needs configuring.
+
+## 12. Known issues (not yet fixed)
+
+- **Clearing a policy-code search strands the reader's scroll position.**
+  Reported directly: searching a policy code (Phase 14) correctly scrolls
+  to that policy, but nppf.js's own search then hides every other policy
+  that doesn't contain the query text — reasonable for search generally,
+  but it means the reader can't scroll around or check neighbouring
+  policies while still "at" the one they searched for, without clearing
+  the search first. Clearing it (the `×` button) does bring every policy
+  back, but nppf.js's own `clr` handler doesn't preserve scroll position
+  across that reveal — the reappearing content shifts the layout under the
+  reader, moving them away from the policy they were just looking at. The
+  fix likely needs the same shape as Phase 15's chapter-reopen fix and the
+  bookmark-filter scroll fixes in Phase 13/14 (PLAN.md's own recurring
+  pattern: a remembered position is only meaningful once the layout it was
+  recorded against exists again) — e.g. remembering the searched-for
+  policy's id across a clear and re-scrolling to it afterward, likely by
+  hooking `#clr`'s click alongside nppf.js's own handler rather than
+  editing nppf.js itself.
